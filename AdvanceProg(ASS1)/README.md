@@ -121,14 +121,28 @@ flowchart LR
 
     Client["Client (Postman)"]
 
-    Order["Order Service\nREST :8080\n gRPC Server :50052"]
-    Payment["Payment Service\n gRPC Server :50051"]
+    subgraph OrderService["Order Service"]
+        OS["REST :8080\n gRPC Server :50052"]
+    end
+
+    subgraph PaymentService["Payment Service"]
+        PS["gRPC Server :50051"]
+    end
+
+    subgraph Infrastructure
+        DB1[(Order DB)]
+        DB2[(Payment DB)]
+    end
 
     StreamClient["Streaming Client"]
 
-    Client -->|REST API| Order
-    Order -->|gRPC| Payment
-    StreamClient -->|Subscribe| Order
-    Order -->|Streaming Updates| StreamClient
+    Client -->|REST API| OS
+    OS -->|gRPC| PS
+    OS --> DB1
+    PS --> DB2
+
+    StreamClient -->|Subscribe| OS
+    OS -->|Streaming Updates| StreamClient
 ```
+
 
