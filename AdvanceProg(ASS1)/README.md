@@ -1,90 +1,134 @@
-# Order & Payment Microservices
+# AP2 Assignment 2 - gRPC Migration
 
 ## Overview
 
-This project implements two microservices:
+This project demonstrates migration from REST to gRPC communication between microservices.
 
-* Order Service
-* Payment Service
+The system consists of:
 
-They communicate via REST API.
+* Order Service (REST + gRPC server for streaming)
+* Payment Service (gRPC server)
+
+---
+
+## Technologies
+
+* Go
+* gRPC
+* Protocol Buffers
+* PostgreSQL
+* Gin (REST)
 
 ---
 
 ## Architecture
 
-Each service follows Clean Architecture:
-
-* domain
-* usecase
-* repository
-* transport
+* External communication: REST (Order Service)
+* Internal communication: gRPC (Order → Payment)
+* Streaming: Order Service → Client (real-time updates)
 
 ---
 
-## Communication
-
-Order Service sends HTTP request to Payment Service.
-
-If payment is successful → order becomes "Paid".
-If failed → order becomes "Failed".
-
----
-
-## Database
-
-Order Service uses PostgreSQL.
-
-Table: orders
-
-* id
-* customer_id
-* item_name
-* amount
-* status
-* created_at
-
----
-
-## Endpoints
-
-### Order Service
-
-* POST /orders
-* GET /orders/{id}
-* PATCH /orders/{id}/cancel
+## gRPC Services
 
 ### Payment Service
 
-* POST /payments
+* `ProcessPayment(PaymentRequest) → PaymentResponse`
+
+### Order Service
+
+* `SubscribeToOrderUpdates(OrderRequest) → stream OrderStatusUpdate`
 
 ---
 
-## Business Rules
+## How to Run
 
-* Amount must be > 0
-* If amount > 100000 → payment declined
-* Only Pending orders can be cancelled
+### 1. Start Payment Service
+
+```bash
+cd payment-service
+go run cmd/main.go
+```
+
+### 2. Start Order Service
+
+```bash
+cd order-service
+go run cmd/main.go
+```
 
 ---
 
-## Failure Handling
+## Environment Variables
 
-If Payment Service is unavailable → Order Service returns 503 error.
+```env
+GRPC_PAYMENT_ADDR=localhost:50051
+```
 
 ---
 
 ## Testing
 
-Tested using Postman:
+### Create Order
 
-* Create order
-* Get order
-* Cancel order
-* Database verification (PostgreSQL)
+```http
+POST /orders
+```
+
+### Cancel Order
+
+```http
+PATCH /orders/{id}/cancel
+```
+
+### Streaming
+
+Run streaming client and observe:
+
+```
+STATUS: Pending
+STATUS: Cancelled
+```
+
+---
+
+## Features
+
+* Contract-first development using Protocol Buffers
+* gRPC client/server implementation
+* Server-side streaming with real-time DB updates
+* Clean Architecture preserved
+
+---
+
+## Evidence
+
+* Order creation (Paid)
+* gRPC communication
+* Streaming updates (Pending → Cancelled)
 
 ---
 
 ## Conclusion
 
-The system demonstrates microservices architecture with REST communication and database persistence.
+The system was successfully migrated from REST to gRPC, improving type safety and enabling real-time communication via streaming.
+
+
+## 📊 Architecture Diagram
+
+```mermaid
+flowchart LR
+
+    Client["Client (Postman)"]
+
+    Order["Order Service\nREST :8080\n gRPC Server :50052"]
+    Payment["Payment Service\n gRPC Server :50051"]
+
+    StreamClient["Streaming Client"]
+
+    Client -->|REST API| Order
+    Order -->|gRPC| Payment
+    StreamClient -->|Subscribe| Order
+    Order -->|Streaming Updates| StreamClient
+```
+

@@ -50,18 +50,21 @@ func (uc *OrderUsecase) CreateOrder(customerID, itemName string, amount int64) (
 	}
 
 	// вызываем Payment Service через интерфейс (правильно!)
-	status, err := uc.payment.Pay(order.ID, order.Amount)
-	if err != nil {
-		order.Status = "Failed"
-		_ = uc.repo.Update(order)
-		return nil, err
-	}
+	//status, err := uc.payment.Pay(order.ID, order.Amount)
+	//if err != nil {
+	//	order.Status = "Failed"
+	//	_ = uc.repo.Update(order)
+	//	return nil, err
+	//}
+	//
+	//if status == "Authorized" {
+	//	order.Status = "Paid"
+	//} else {
+	//	order.Status = "Failed"
+	//}
 
-	if status == "Authorized" {
-		order.Status = "Paid"
-	} else {
-		order.Status = "Failed"
-	}
+	order.Status = "Pending"
+	_ = uc.repo.Update(order)
 
 	// обновляем статус
 	_ = uc.repo.Update(order)
