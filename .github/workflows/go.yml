@@ -8,21 +8,16 @@ branches:
 jobs:
 build:
 runs-on: ubuntu-latest
-  
-  ```
+
 steps:
   - uses: actions/checkout@v3
 
   - uses: actions/setup-go@v4
     with:
-      go-version: '1.22'
+      go-version: 1.22
 
   - name: Build order-service
-    run: |
-      cd AdvanceProg(ASS1)/order-service
-      go build ./...
+    run: cd AdvanceProg(ASS1)/order-service && go build ./...
 
   - name: Build payment-service
-    run: |
-      cd AdvanceProg(ASS1)/payment-service
-      go build ./...
+    run: cd AdvanceProg(ASS1)/payment-service && go build ./...
