@@ -27,6 +27,17 @@ message OrderStatusUpdate {
   string status = 2;
 }
 
+message GetPaymentStatsRequest {}
+
+message PaymentStats {
+  int64 total_count = 1;
+  int64 authorized_count = 2;
+  int64 declined_count = 3;
+  int64 total_amount = 4;
+}
+
 service OrderService {
   rpc SubscribeToOrderUpdates (OrderRequest) returns (stream OrderStatusUpdate);
+  rpc ProcessPayment(PaymentRequest) returns (PaymentResponse);
+  rpc GetPaymentStats(GetPaymentStatsRequest) returns (PaymentStats);
 }

@@ -122,6 +122,8 @@ var PaymentService_ServiceDesc = grpc.ServiceDesc{
 
 const (
 	OrderService_SubscribeToOrderUpdates_FullMethodName = "/payment.OrderService/SubscribeToOrderUpdates"
+	OrderService_ProcessPayment_FullMethodName          = "/payment.OrderService/ProcessPayment"
+	OrderService_GetPaymentStats_FullMethodName         = "/payment.OrderService/GetPaymentStats"
 )
 
 // OrderServiceClient is the client API for OrderService service.
@@ -129,6 +131,8 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OrderServiceClient interface {
 	SubscribeToOrderUpdates(ctx context.Context, in *OrderRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[OrderStatusUpdate], error)
+	ProcessPayment(ctx context.Context, in *PaymentRequest, opts ...grpc.CallOption) (*PaymentResponse, error)
+	GetPaymentStats(ctx context.Context, in *GetPaymentStatsRequest, opts ...grpc.CallOption) (*PaymentStats, error)
 }
 
 type orderServiceClient struct {
@@ -158,11 +162,33 @@ func (c *orderServiceClient) SubscribeToOrderUpdates(ctx context.Context, in *Or
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type OrderService_SubscribeToOrderUpdatesClient = grpc.ServerStreamingClient[OrderStatusUpdate]
 
+func (c *orderServiceClient) ProcessPayment(ctx context.Context, in *PaymentRequest, opts ...grpc.CallOption) (*PaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PaymentResponse)
+	err := c.cc.Invoke(ctx, OrderService_ProcessPayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *orderServiceClient) GetPaymentStats(ctx context.Context, in *GetPaymentStatsRequest, opts ...grpc.CallOption) (*PaymentStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PaymentStats)
+	err := c.cc.Invoke(ctx, OrderService_GetPaymentStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrderServiceServer is the server API for OrderService service.
 // All implementations must embed UnimplementedOrderServiceServer
 // for forward compatibility.
 type OrderServiceServer interface {
 	SubscribeToOrderUpdates(*OrderRequest, grpc.ServerStreamingServer[OrderStatusUpdate]) error
+	ProcessPayment(context.Context, *PaymentRequest) (*PaymentResponse, error)
+	GetPaymentStats(context.Context, *GetPaymentStatsRequest) (*PaymentStats, error)
 	mustEmbedUnimplementedOrderServiceServer()
 }
 
@@ -175,6 +201,12 @@ type UnimplementedOrderServiceServer struct{}
 
 func (UnimplementedOrderServiceServer) SubscribeToOrderUpdates(*OrderRequest, grpc.ServerStreamingServer[OrderStatusUpdate]) error {
 	return status.Error(codes.Unimplemented, "method SubscribeToOrderUpdates not implemented")
+}
+func (UnimplementedOrderServiceServer) ProcessPayment(context.Context, *PaymentRequest) (*PaymentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ProcessPayment not implemented")
+}
+func (UnimplementedOrderServiceServer) GetPaymentStats(context.Context, *GetPaymentStatsRequest) (*PaymentStats, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPaymentStats not implemented")
 }
 func (UnimplementedOrderServiceServer) mustEmbedUnimplementedOrderServiceServer() {}
 func (UnimplementedOrderServiceServer) testEmbeddedByValue()                      {}
@@ -208,13 +240,58 @@ func _OrderService_SubscribeToOrderUpdates_Handler(srv interface{}, stream grpc.
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type OrderService_SubscribeToOrderUpdatesServer = grpc.ServerStreamingServer[OrderStatusUpdate]
 
+func _OrderService_ProcessPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).ProcessPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_ProcessPayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).ProcessPayment(ctx, req.(*PaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrderService_GetPaymentStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPaymentStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).GetPaymentStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_GetPaymentStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).GetPaymentStats(ctx, req.(*GetPaymentStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrderService_ServiceDesc is the grpc.ServiceDesc for OrderService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var OrderService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "payment.OrderService",
 	HandlerType: (*OrderServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ProcessPayment",
+			Handler:    _OrderService_ProcessPayment_Handler,
+		},
+		{
+			MethodName: "GetPaymentStats",
+			Handler:    _OrderService_GetPaymentStats_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "SubscribeToOrderUpdates",

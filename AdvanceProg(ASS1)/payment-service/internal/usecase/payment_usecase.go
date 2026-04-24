@@ -8,6 +8,7 @@ import (
 
 type PaymentRepository interface {
 	Save(payment *domain.Payment) error
+	GetStats() (int64, int64, int64, int64, error)
 }
 
 type PaymentUsecase struct {
@@ -39,4 +40,8 @@ func (uc *PaymentUsecase) ProcessPayment(orderID string, amount int64) (*domain.
 	}
 
 	return payment, nil
+}
+
+func (uc *PaymentUsecase) GetStats() (int64, int64, int64, int64, error) {
+	return uc.repo.GetStats()
 }

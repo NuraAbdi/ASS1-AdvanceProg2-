@@ -30,3 +30,18 @@ func (s *Server) ProcessPayment(ctx context.Context, req *pb.PaymentRequest) (*p
 		TransactionId: payment.TransactionID,
 	}, nil
 }
+
+func (s *Server) GetPaymentStats(ctx context.Context, req *pb.GetPaymentStatsRequest) (*pb.PaymentStats, error) {
+
+	total, authorized, declined, amount, err := s.uc.GetStats()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.PaymentStats{
+		TotalCount:      total,
+		AuthorizedCount: authorized,
+		DeclinedCount:   declined,
+		TotalAmount:     amount,
+	}, nil
+}

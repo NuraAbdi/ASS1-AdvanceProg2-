@@ -16,6 +16,9 @@ import (
 
 type InMemoryRepo struct{}
 
+func (r *InMemoryRepo) GetStats() (int64, int64, int64, int64, error) {
+	return 0, 0, 0, 0, nil
+}
 func (r *InMemoryRepo) Save(p *domain.Payment) error {
 	return nil
 }
