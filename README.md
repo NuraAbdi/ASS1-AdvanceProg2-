@@ -1,148 +1,269 @@
-# AP2 Assignment 2 - gRPC Migration
+# Assignment 3 - Event-Driven Architecture with RabbitMQ
 
 ## Overview
 
-This project demonstrates migration from REST to gRPC communication between microservices.
+This project demonstrates Event-Driven Architecture (EDA) using RabbitMQ.
 
-The system consists of:
+The system consists of three microservices:
 
-* Order Service (REST + gRPC server for streaming)
-* Payment Service (gRPC server)
+- Order Service
+- Payment Service
+- Notification Service
+
+The Payment Service publishes events to RabbitMQ after successful payment processing, while the Notification Service consumes these events asynchronously.
+
+This implementation includes:
+- gRPC communication
+- RabbitMQ message broker
+- Manual ACKs
+- Durable queues
+- Idempotent consumer
+- Docker Compose orchestration
+
+---
+
+## Architecture Diagram
+
+```mermaid
+graph TD
+    A[Order Service] -->|gRPC| B[Payment Service]
+    B -->|Publish Event| C[RabbitMQ]
+    C -->|Consume Event| D[Notification Service]
+```
+
+---
+
+## Event Flow
+
+1. Order Service sends a gRPC request to Payment Service.
+2. Payment Service processes payment.
+3. After successful processing, Payment Service publishes an event to RabbitMQ.
+4. Notification Service consumes the event asynchronously.
+5. Consumer manually acknowledges the message after successful processing.
 
 ---
 
 ## Technologies
 
-* Go
-* gRPC
-* Protocol Buffers
-* PostgreSQL
-* Gin (REST)
+- Go
+- gRPC
+- RabbitMQ
+- Docker
+- Docker Compose
+- Gin
+- PostgreSQL
 
 ---
 
-## Architecture
-
-* External communication: REST (Order Service)
-* Internal communication: gRPC (Order → Payment)
-* Streaming: Order Service → Client (real-time updates)
-
----
-
-## gRPC Services
-
-### Payment Service
-
-* `ProcessPayment(PaymentRequest) → PaymentResponse`
+## Services
 
 ### Order Service
 
-* `SubscribeToOrderUpdates(OrderRequest) → stream OrderStatusUpdate`
+Responsibilities:
+- Create orders
+- Communicate with Payment Service using gRPC
 
 ---
 
-## How to Run
+### Payment Service (Producer)
 
-### 1. Start Payment Service
+Responsibilities:
+- Process payments
+- Publish payment events to RabbitMQ
+
+Published event payload:
+
+```json
+{
+  "order_id": "111",
+  "amount": 100,
+  "status": "Authorized"
+}
+```
+
+Queue name:
+
+```text
+payment.completed
+```
+
+---
+
+### Notification Service (Consumer)
+
+Responsibilities:
+- Consume RabbitMQ messages
+- Simulate sending notifications
+- Handle duplicate messages safely
+
+Example logs:
+
+```text
+Notification received: {"order_id":"111","amount":100}
+Message ACKed
+Duplicate message skipped: {"order_id":"111","amount":100}
+```
+
+---
+
+## Reliability Implementation
+
+### Manual ACK
+
+Auto-ACK is disabled.
+
+Messages are acknowledged only after successful processing.
+
+Example:
+
+```go
+msg.Ack(false)
+```
+
+This ensures at-least-once delivery.
+
+---
+
+### Durable Queue
+
+RabbitMQ durable queues are enabled to ensure messages survive broker restart.
+
+Example:
+
+```go
+QueueDeclare(
+    "payment.completed",
+    true,
+    false,
+    false,
+    false,
+    nil,
+)
+```
+
+---
+
+## Idempotency Strategy
+
+The Notification Service implements idempotent message handling.
+
+Processed messages are stored in-memory using a map to prevent duplicate processing.
+
+If the same message is delivered twice, it is skipped.
+
+Example:
+
+```text
+Duplicate message skipped
+```
+
+---
+
+## Docker Compose
+
+All services are orchestrated using Docker Compose.
+
+Components:
+- rabbitmq
+- payment-service
+- notification-service
+
+Run the system:
 
 ```bash
-cd payment-service
-go run cmd/main.go
-```
-
-### 2. Start Order Service
-
-```bash
-cd order-service
-go run cmd/main.go
+docker compose up --build
 ```
 
 ---
 
-## Environment Variables
+## RabbitMQ Dashboard
 
-```env
-GRPC_PAYMENT_ADDR=localhost:50051
+RabbitMQ Management UI:
+
+```text
+http://localhost:15672
+```
+
+Credentials:
+
+```text
+username: guest
+password: guest
 ```
 
 ---
 
-## Testing
+## API Example
 
-### Create Order
+### Create Payment
 
-```http
-POST /orders
+Endpoint:
+
+```text
+POST http://localhost:8081/payments
 ```
 
-### Cancel Order
+Request body:
 
-```http
-PATCH /orders/{id}/cancel
+```json
+{
+  "order_id": "111",
+  "amount": 100
+}
 ```
 
-### Streaming
+Response:
 
-Run streaming client and observe:
-
-```
-STATUS: Pending
-STATUS: Cancelled
+```json
+{
+  "status": "Authorized",
+  "transaction_id": "example-id"
+}
 ```
 
 ---
 
-## Features
+## Screenshots
 
-* Contract-first development using Protocol Buffers
-* gRPC client/server implementation
-* Server-side streaming with real-time DB updates
-* Clean Architecture preserved
+### RabbitMQ Queue
 
----
-
-## Evidence
-
-* Order creation (Paid)
-* gRPC communication
-* Streaming updates (Pending → Cancelled)
+Add screenshot here.
 
 ---
 
-## Conclusion
+### Docker Compose Running
 
-The system was successfully migrated from REST to gRPC, improving type safety and enabling real-time communication via streaming.
+Add screenshot here.
 
+---
 
-## 📊 Architecture Diagram
+### Notification Consumer
 
-```mermaid
-flowchart LR
+Add screenshot here.
 
-    Client["Client (Postman)"]
+---
 
-    subgraph OrderService["Order Service"]
-        OS["REST :8080\n gRPC Server :50052"]
-    end
+### Duplicate Detection
 
-    subgraph PaymentService["Payment Service"]
-        PS["gRPC Server :50051"]
-    end
+Add screenshot here.
 
-    subgraph Infrastructure
-        DB1[(Order DB)]
-        DB2[(Payment DB)]
-    end
+---
 
-    StreamClient["Streaming Client"]
+### GitHub Actions
 
-    Client -->|REST API| OS
-    OS -->|gRPC| PS
-    OS --> DB1
-    PS --> DB2
+Add screenshot here.
 
-    StreamClient -->|Subscribe| OS
-    OS -->|Streaming Updates| StreamClient
-```
+---
 
+## Result
 
+This project successfully demonstrates:
+
+- Event-Driven Architecture
+- Asynchronous communication
+- RabbitMQ Producer/Consumer pattern
+- Manual ACK implementation
+- Durable queues
+- Idempotent consumer logic
+- Docker-based orchestration
+- gRPC communication between microservices
