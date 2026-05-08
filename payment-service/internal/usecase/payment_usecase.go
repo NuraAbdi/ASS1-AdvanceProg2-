@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"payment-service/internal/domain"
+	"payment-service/internal/messaging"
 
 	"github.com/google/uuid"
 )
@@ -12,11 +13,15 @@ type PaymentRepository interface {
 }
 
 type PaymentUsecase struct {
-	repo PaymentRepository
+	repo      PaymentRepository
+	publisher *messaging.Publisher
 }
 
-func NewPaymentUsecase(r PaymentRepository) *PaymentUsecase {
-	return &PaymentUsecase{repo: r}
+func NewPaymentUsecase(r PaymentRepository, p *messaging.Publisher) *PaymentUsecase {
+	return &PaymentUsecase{
+		repo:      r,
+		publisher: p,
+	}
 }
 
 func (uc *PaymentUsecase) ProcessPayment(orderID string, amount int64) (*domain.Payment, error) {
@@ -39,6 +44,10 @@ func (uc *PaymentUsecase) ProcessPayment(orderID string, amount int64) (*domain.
 		return nil, err
 	}
 
+	if payment.Status == "Authorized" {
+		uc.publisher.Publish(payment.OrderID, payment.Amount)
+	}
+	
 	return payment, nil
 }
 

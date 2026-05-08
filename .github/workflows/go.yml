@@ -1,23 +1,26 @@
 name: Go Build
 
 on:
-push:
-branches:
-  - grpc-migration
+  push:
+    branches:
+      - grpc-migration
 
 jobs:
-build:
-runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-steps:
-  - uses: actions/checkout@v3
+    steps:
+      - uses: actions/checkout@v3
 
-  - uses: actions/setup-go@v4
-    with:
-      go-version: 1.22
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.25.6
 
-  - name: Build order-service
-    run: cd AdvanceProg(ASS1)/order-service && go build ./...
+      - name: Build order-service
+        run: cd order-service && go build ./...
 
-  - name: Build payment-service
-    run: cd AdvanceProg(ASS1)/payment-service && go build ./...
+      - name: Build payment-service
+        run: cd payment-service && go build ./...
+
+      - name: Build notification-service
+        run: cd notification-service && go build ./...

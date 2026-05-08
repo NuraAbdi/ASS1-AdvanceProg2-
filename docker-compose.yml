@@ -1,0 +1,27 @@
+services:
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+
+    ports:
+      - "8081:8081"
+      - "50051:50051"
+
+    depends_on:
+      - rabbitmq
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+
+    depends_on:
+      - rabbitmq

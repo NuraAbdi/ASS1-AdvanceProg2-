@@ -18,7 +18,7 @@ func main() {
 	client := pb.NewOrderServiceClient(conn)
 
 	stream, err := client.SubscribeToOrderUpdates(context.Background(), &pb.OrderRequest{
-		OrderId: "97f44b6b-ba10-401a-ad47-4713672b4ba2",
+		OrderId: "4573976c-16fd-4a73-891f-3c88edbdf60f",
 	})
 	if err != nil {
 		log.Fatal(err)

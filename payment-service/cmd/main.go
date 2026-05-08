@@ -12,6 +12,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
+
+	"payment-service/internal/messaging"
 )
 
 type InMemoryRepo struct{}
@@ -25,7 +27,12 @@ func (r *InMemoryRepo) Save(p *domain.Payment) error {
 
 func main() {
 	repo := &InMemoryRepo{}
-	uc := usecase.NewPaymentUsecase(repo)
+	publisher, err := messaging.NewPublisher("amqp://guest:guest@rabbitmq:5672/")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	uc := usecase.NewPaymentUsecase(repo, publisher)
 
 	// 🔹 HTTP server (REST)
 	go func() {
