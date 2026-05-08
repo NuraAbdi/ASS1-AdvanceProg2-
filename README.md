@@ -227,31 +227,31 @@ Response:
 
 ### RabbitMQ Queue
 
-Add screenshot here.
+![RabbitMQ](screenshots3/rabbitmq.png)
 
 ---
 
 ### Docker Compose Running
 
-Add screenshot here.
+![Docker](screenshots3/docker.png)
 
 ---
 
 ### Notification Consumer
 
-Add screenshot here.
+![Consumer](screenshots3/consumer.png)
 
 ---
 
 ### Duplicate Detection
 
-Add screenshot here.
+![Duplicate](screenshots3/duplicate.png)
 
 ---
 
 ### GitHub Actions
 
-Add screenshot here.
+![Actions](screenshots3/actions.png)
 
 ---
 
