@@ -1,7 +1,10 @@
 package usecase
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
+	"order-service/internal/cache"
 	"time"
 
 	"order-service/internal/domain"
@@ -24,12 +27,14 @@ type OrderRepository interface {
 type OrderUsecase struct {
 	repo    OrderRepository
 	payment PaymentClient
+	cache   *cache.RedisCache
 }
 
-func NewOrderUsecase(r OrderRepository, p PaymentClient) *OrderUsecase {
+func NewOrderUsecase(r OrderRepository, p PaymentClient, c *cache.RedisCache) *OrderUsecase {
 	return &OrderUsecase{
 		repo:    r,
 		payment: p,
+		cache:   c,
 	}
 }
 
@@ -54,6 +59,9 @@ func (uc *OrderUsecase) CreateOrder(customerID, itemName string, amount int64) (
 	if err != nil {
 		order.Status = "Failed"
 		_ = uc.repo.Update(order)
+
+		_ = uc.cache.Delete("order:" + order.ID)
+
 		return nil, err
 	}
 
@@ -63,17 +71,47 @@ func (uc *OrderUsecase) CreateOrder(customerID, itemName string, amount int64) (
 		order.Status = "Failed"
 	}
 
-	order.Status = "Pending"
-	_ = uc.repo.Update(order)
-
 	// обновляем статус
 	_ = uc.repo.Update(order)
+
+	_ = uc.cache.Delete("order:" + order.ID)
 
 	return order, nil
 }
 
 func (uc *OrderUsecase) GetOrder(id string) (*domain.Order, error) {
-	return uc.repo.GetByID(id)
+
+	// 1. check redis cache
+	cached, err := uc.cache.Get("order:" + id)
+
+	if err == nil {
+		log.Println("CACHE HIT")
+
+		var order domain.Order
+
+		err = json.Unmarshal([]byte(cached), &order)
+		if err == nil {
+			return &order, nil
+		}
+	}
+
+	log.Println("CACHE MISS")
+
+	// 2. get from postgres
+	order, err := uc.repo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. save to redis
+	data, _ := json.Marshal(order)
+
+	_ = uc.cache.Set(
+		"order:"+id,
+		string(data),
+	)
+
+	return order, nil
 }
 
 func (uc *OrderUsecase) CancelOrder(id string) error {
@@ -87,7 +125,15 @@ func (uc *OrderUsecase) CancelOrder(id string) error {
 	}
 
 	order.Status = "Cancelled"
-	return uc.repo.Update(order)
+	err = uc.repo.Update(order)
+	if err != nil {
+		return err
+	}
+
+	// invalidate redis cache
+	_ = uc.cache.Delete("order:" + id)
+
+	return nil
 }
 
 func (uc *OrderUsecase) GetStats() (map[string]int, error) {

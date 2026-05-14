@@ -8,15 +8,15 @@ import (
 
 	pb "order-service/proto/paymentpb"
 
+	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
+	"google.golang.org/grpc"
+	"order-service/internal/cache"
 	"order-service/internal/paymentclient"
 	"order-service/internal/repository"
 	grpcTransport "order-service/internal/transport/grpc"
 	"order-service/internal/transport/http"
 	"order-service/internal/usecase"
-
-	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
-	"google.golang.org/grpc"
 )
 
 func main() {
@@ -33,6 +33,8 @@ func main() {
 
 	repo := repository.NewPostgresRepo(db)
 
+	redisCache := cache.NewRedisCache("localhost:6379")
+
 	paymentAddr := os.Getenv("GRPC_PAYMENT_ADDR")
 
 	paymentClient, err := paymentclient.NewGRPCClient(paymentAddr)
@@ -40,7 +42,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	uc := usecase.NewOrderUsecase(repo, paymentClient)
+	uc := usecase.NewOrderUsecase(repo, paymentClient, redisCache)
 
 	// 🔹 HTTP
 	go func() {

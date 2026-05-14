@@ -65,7 +65,7 @@ func (c *Consumer) Consume() error {
 
 		body := string(msg.Body)
 
-		// idempotency check
+		// idempotency check(
 		if c.processed[body] {
 			log.Println("⚠Duplicate message skipped:", body)
 
