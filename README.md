@@ -1,85 +1,167 @@
-# Assignment 3 - Event-Driven Architecture with RabbitMQ
+# Assignment 4 - Distributed Caching and Event-Driven Microservices
 
 ## Overview
 
-This project demonstrates Event-Driven Architecture (EDA) using RabbitMQ.
+This project demonstrates a distributed microservice architecture using:
+
+* REST API
+* gRPC communication
+* RabbitMQ event-driven messaging
+* Redis distributed caching
+* Docker Compose orchestration
+* PostgreSQL persistence
 
 The system consists of three microservices:
 
-- Order Service
-- Payment Service
-- Notification Service
+* Order Service
+* Payment Service
+* Notification Service
 
-The Payment Service publishes events to RabbitMQ after successful payment processing, while the Notification Service consumes these events asynchronously.
-
-This implementation includes:
-- gRPC communication
-- RabbitMQ message broker
-- Manual ACKs
-- Durable queues
-- Idempotent consumer
-- Docker Compose orchestration
+The project implements asynchronous communication, distributed caching, and microservice interaction patterns.
 
 ---
 
-## Architecture Diagram
+# Architecture Diagram
 
 ```mermaid
 graph TD
-    A[Order Service] -->|gRPC| B[Payment Service]
-    B -->|Publish Event| C[RabbitMQ]
-    C -->|Consume Event| D[Notification Service]
+    A[Client / Postman] -->|REST| B[Order Service]
+
+    B -->|gRPC| C[Payment Service]
+
+    C -->|Publish Event| D[RabbitMQ]
+
+    D -->|Consume Event| E[Notification Service]
+
+    B -->|Cache| F[Redis]
+
+    B -->|Store Orders| G[PostgreSQL]
 ```
 
 ---
 
-## Event Flow
+# Technologies Used
 
-1. Order Service sends a gRPC request to Payment Service.
-2. Payment Service processes payment.
-3. After successful processing, Payment Service publishes an event to RabbitMQ.
-4. Notification Service consumes the event asynchronously.
-5. Consumer manually acknowledges the message after successful processing.
-
----
-
-## Technologies
-
-- Go
-- gRPC
-- RabbitMQ
-- Docker
-- Docker Compose
-- Gin
-- PostgreSQL
+* Go
+* Gin
+* gRPC
+* RabbitMQ
+* Redis
+* PostgreSQL
+* Docker
+* Docker Compose
+* GitHub Actions
 
 ---
 
-## Services
+# Microservices
 
-### Order Service
+## Order Service
 
 Responsibilities:
-- Create orders
-- Communicate with Payment Service using gRPC
 
----
+* Create orders
+* Get order information
+* Cancel orders
+* Communicate with Payment Service using gRPC
+* Cache orders in Redis
 
-### Payment Service (Producer)
+REST Endpoints:
 
-Responsibilities:
-- Process payments
-- Publish payment events to RabbitMQ
-
-Published event payload:
-
-```json
-{
-  "order_id": "111",
-  "amount": 100,
-  "status": "Authorized"
-}
+```http
+POST /orders
+GET /orders/:id
+PATCH /orders/:id/cancel
+GET /orders/stats
 ```
+
+---
+
+## Payment Service
+
+Responsibilities:
+
+* Process payments
+* Publish payment events to RabbitMQ
+* Provide gRPC API
+
+Business rule:
+
+```text
+Amount > 100000 → Declined
+Otherwise → Authorized
+```
+
+---
+
+## Notification Service
+
+Responsibilities:
+
+* Consume RabbitMQ events
+* Simulate notification delivery
+* Handle duplicate messages safely
+* Use manual ACK processing
+
+---
+
+# Event-Driven Architecture
+
+Flow:
+
+1. Client sends REST request to Order Service.
+2. Order Service calls Payment Service using gRPC.
+3. Payment Service processes payment.
+4. Payment Service publishes event to RabbitMQ.
+5. Notification Service consumes event asynchronously.
+6. Notification Service manually acknowledges message.
+
+---
+
+# Redis Distributed Caching
+
+This assignment implements Redis distributed caching using the Cache-Aside pattern.
+
+## Cache-Aside Flow
+
+```text
+GET Order
+    ↓
+Check Redis Cache
+    ↓
+CACHE HIT  → return cached data
+CACHE MISS → fetch from PostgreSQL
+           → save to Redis
+           → return response
+```
+
+---
+
+# Cache Invalidation
+
+When an order is updated or cancelled:
+
+```text
+Update Order
+    ↓
+Delete Redis Cache
+    ↓
+Next request reloads fresh data
+```
+
+This prevents stale cached data.
+
+---
+
+# RabbitMQ Features
+
+Implemented RabbitMQ reliability features:
+
+* Durable queues
+* Manual ACK
+* Asynchronous communication
+* Producer / Consumer pattern
+* Idempotent consumer logic
 
 Queue name:
 
@@ -89,28 +171,7 @@ payment.completed
 
 ---
 
-### Notification Service (Consumer)
-
-Responsibilities:
-- Consume RabbitMQ messages
-- Simulate sending notifications
-- Handle duplicate messages safely
-
-Example logs:
-
-```text
-Notification received: {"order_id":"111","amount":100}
-Message ACKed
-Duplicate message skipped: {"order_id":"111","amount":100}
-```
-
----
-
-## Reliability Implementation
-
-### Manual ACK
-
-Auto-ACK is disabled.
+# Manual ACK
 
 Messages are acknowledged only after successful processing.
 
@@ -120,38 +181,17 @@ Example:
 msg.Ack(false)
 ```
 
-This ensures at-least-once delivery.
+This guarantees reliable delivery.
 
 ---
 
-### Durable Queue
+# Idempotency
 
-RabbitMQ durable queues are enabled to ensure messages survive broker restart.
+Notification Service prevents duplicate message processing.
 
-Example:
+Duplicate events are skipped safely.
 
-```go
-QueueDeclare(
-    "payment.completed",
-    true,
-    false,
-    false,
-    false,
-    nil,
-)
-```
-
----
-
-## Idempotency Strategy
-
-The Notification Service implements idempotent message handling.
-
-Processed messages are stored in-memory using a map to prevent duplicate processing.
-
-If the same message is delivered twice, it is skipped.
-
-Example:
+Example logs:
 
 ```text
 Duplicate message skipped
@@ -159,16 +199,18 @@ Duplicate message skipped
 
 ---
 
-## Docker Compose
+# Docker Compose
 
-All services are orchestrated using Docker Compose.
+Infrastructure services are containerized using Docker Compose.
 
-Components:
-- rabbitmq
-- payment-service
-- notification-service
+Containers:
 
-Run the system:
+* rabbitmq
+* redis
+* payment-service
+* notification-service
+
+Run:
 
 ```bash
 docker compose up --build
@@ -176,7 +218,7 @@ docker compose up --build
 
 ---
 
-## RabbitMQ Dashboard
+# RabbitMQ Dashboard
 
 RabbitMQ Management UI:
 
@@ -193,22 +235,39 @@ password: guest
 
 ---
 
-## API Example
+# Redis Cache Demonstration
 
-### Create Payment
-
-Endpoint:
+First request:
 
 ```text
-POST http://localhost:8081/payments
+CACHE MISS
+```
+
+Second request:
+
+```text
+CACHE HIT
+```
+
+This demonstrates Redis caching optimization.
+
+---
+
+# Example API Request
+
+## Create Order
+
+```http
+POST http://localhost:8080/orders
 ```
 
 Request body:
 
 ```json
 {
-  "order_id": "111",
-  "amount": 100
+  "customer_id": "321",
+  "item_name": "Laptop",
+  "amount": 2000
 }
 ```
 
@@ -216,54 +275,66 @@ Response:
 
 ```json
 {
-  "status": "Authorized",
-  "transaction_id": "example-id"
+  "status": "Paid"
 }
 ```
 
 ---
 
-## Screenshots
+# Screenshots
 
-### RabbitMQ Queue
+## Create Order
 
-![RabbitMQ](screenshots3/rabbitmq.png)
-
----
-
-### Docker Compose Running
-
-![Docker](screenshots3/docker.png)
+![Create Order](screenshots4/create_order.png)
 
 ---
 
-### Notification Consumer
+## Cache MISS
 
-![Consumer](screenshots3/consumer.png)
-
----
-
-### Duplicate Detection
-
-![Duplicate](screenshots3/duplicate.png)
+![Cache MISS](screenshots4/cash_miss.png)
 
 ---
 
-### GitHub Actions
+## Cache HIT
 
-![Actions](screenshots3/actions.png)
+![Cache HIT](screenshots4/cash_hit.png)
 
 ---
 
-## Result
+## RabbitMQ Events
+
+![RabbitMQ Events](screenshots4/RabbitMQ_events.png)
+
+---
+
+## RabbitMQ Dashboard
+
+![RabbitMQ Dashboard](screenshots4/rabbitmq_dashboard.png)
+
+---
+
+## Docker Compose
+
+![Docker Compose](screenshots4/docker_compose_running.png)
+
+---
+
+# Result
 
 This project successfully demonstrates:
 
-- Event-Driven Architecture
-- Asynchronous communication
-- RabbitMQ Producer/Consumer pattern
-- Manual ACK implementation
-- Durable queues
-- Idempotent consumer logic
-- Docker-based orchestration
-- gRPC communication between microservices
+* REST microservices
+* gRPC communication
+* gRPC streaming
+* RabbitMQ event-driven architecture
+* Redis distributed caching
+* Cache-aside pattern
+* Cache invalidation
+* Dockerized infrastructure
+* PostgreSQL persistence
+* Manual ACK handling
+* Idempotent consumers
+* Asynchronous messaging
+* Producer / Consumer architecture
+* CI/CD with GitHub Actions
+
